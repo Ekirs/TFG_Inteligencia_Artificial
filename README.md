@@ -3,8 +3,7 @@ Evaluación de LLMs en conjunto con actividades lúdicas para usuarios con ansie
 Chatngame ("Chat 'n' Game", informal de "charla y juego") sería el programa lanzador.
 
 Se necesita además:
-- API key, lograble tras registrarse en https://cohere.com/ .
-Crear un archivo adicional que se llame "online_config.py" , cuyo contenido sea tan solo esta linea con key_cohere siendo la key: --> cohere_key = 'key_cohere'
+- API key de Cohere, lograble tras registrarse en https://cohere.com/ . Editar "online_config.py", es el archivo que la usa. El programa usa "command", uno de los modelos de lenguaje gratuitos disponibles.
 - modelo GPTQ cuantizado de Llama 2: https://huggingface.co/TheBloke/Llama-2-7B-Chat-GPTQ
 - modelo GPTQ cuantizado de Mistral 7B Instruct v0.2 https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GPTQ
 
