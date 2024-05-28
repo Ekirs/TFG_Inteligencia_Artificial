@@ -4,7 +4,7 @@ Chatngame ("Chat 'n' Game", informal de "charla y juego") sería el programa lan
 
 Se necesita además:
 - API key, lograble tras registrarse en https://cohere.com/ .
-Crear un archivo llamado online_config.py , que simplemente tenga esta linea con key_cohere siendo la key --> cohere_key = 'key_cohere'
+Crear un archivo adicional que se llame "online_config.py" , cuyo contenido sea tan solo esta linea con key_cohere siendo la key: --> cohere_key = 'key_cohere'
 - modelo GPTQ cuantizado de Llama 2: https://huggingface.co/TheBloke/Llama-2-7B-Chat-GPTQ
 - modelo GPTQ cuantizado de Mistral 7B Instruct v0.2 https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GPTQ
 
