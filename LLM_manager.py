@@ -1,9 +1,10 @@
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline  # modelos locales
+import time, threading  # Chat automatizado
+import re  # Trabajado de prompts
 
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline  # para modelos locales
-import time, threading  # chat automatizado
-import re  # trabajado de prompts
+import cohere  # Modelo online usable en este proyecto
 
-import cohere  # modelo online usable en este proyecto
+# IMPORTANTE - archivo único para cada usuario. Bastará crear un online_config.py con el string cohere_key.
 from online_config import cohere_key  # key intransferible de cada usuario, para API Cohere
 
 from utils import send_chat_to_gui
@@ -19,21 +20,41 @@ class LLM_Modelo:
         self.chat_log = []
 
 
-config = ChatConfig()  # instancia para variables generales
+config = ChatConfig()  # Instancia para variables generales
 
-llm = LLM_Modelo()  # instancia para interactuar con modelos
+llm = LLM_Modelo()  # Instancia para interactuar con modelos
 
 # Mensajes de ejemplo para modelos
-llm.chat_log = [{"role": config.name_user, "message": "Tell me something random."},
-            {"role": config.name_bot, "message": "A group of flamingos is called a flamboyance."},
-            {"role": config.name_bot,
-             "message": " This name, flamboyance, fittingly reflects their vibrant pink color and unique appearance."},
-            {"role": config.name_user, "message": "What's the biggest ocean?"},
-            {"role": config.name_bot,
-             "message": "The largest ocean in the world is the Pacific Ocean, with 63 million square miles (169 million square kilometers)."},
-            ]
+llm.chat_log = [{"role": config.name_user, "message": "Tell me something about birds."},
+                {"role": config.name_bot, "message": "Flamingos are birds, and a group of flamingos is called a "
+                                                     + "flamboyance,"
+                                                     + "fittingly reflects their vibrant pink color and unique "
+                                                     + "appearance."},
+                {"role": config.name_user, "message": "Tell me some food recipy."},
+                {"role": config.name_bot, "message": "Here's a super quick and easy recipe: "
+                                                     + "mash 1/2 avocado and spread on toast, "
+                                                     + "sprinkle salt and pepper to taste, "
+                                                     + "and add optionally a squeeze of lemon juice and a sprinkle of "
+                                                       "red pepper flakes. Ready in 2 minutes!"},
+                {"role": config.name_user, "message": "Tell me something about barcelona."},
+                {"role": config.name_bot,
+                 "message": "Did you know that Barcelona has a secret beach hidden beneath the city? The beach is "
+                            + "called Nova Icària, and it's a small, secluded spot that's tucked away from the main "
+                            + "tourist areas."},
+                {"role": config.name_user, "message": "Tell me more about it."},
+                {"role": config.name_bot,
+                 "message": "Another beach, would be the Barceloneta Beach: This is one of the most popular and "
+                            + "iconic beaches in Barcelona. It's"
+                            + " a urban beach, meaning it's located in the heart of the city, and it's known for its "
+                            + "lively atmosphere, restaurants, and bars."},
+                {"role": config.name_user, "message": "Tell me more about it."},
+                {"role": config.name_bot,
+                 "message": "If you go to Barcelona, you should check Barcelona's nightlife! It's a city that truly "
+                            + "comes alive after dark, with a vibrant and"
+                            + " eclectic mix of bars, clubs, and live music venues."}
+                ]
 
-# variable con el tiempo del modo auto. Accesible desde otras clases para interrumpirlo.
+# Variable con el tiempo del modo auto. Accesible desde otras clases para interrumpirlo.
 temp_timer = 0
 
 
@@ -46,18 +67,18 @@ def my_model():
     elif config.llm_index_gui == 1:
         config.model_name_or_path = "TheBloke/Llama-2-7b-Chat-GPTQ"
         config.modelo_activo = "llama2-7b"
-        config.modelo_licencia = ("Built with Meta Llama 2. \n\nMeta Llama 2 is "
+        config.modelo_licencia = ("Built with Meta Llama 2. \nMeta Llama 2 is "
                                   + "licensed under the Meta Llama 2 Community License, "
                                   + "Copyright © Meta Platforms, Inc. All Rights Reserved.")
     elif config.llm_index_gui == 2:
-        config.model_name_or_path = "Cohere command. Modelo online."
+        config.model_name_or_path = "Cohere Command. Modelo online."
         config.modelo_activo = "cohere"
         config.modelo_licencia = ("Uso puramente académico de Cohere Command para consultas."
                                   + "Mas información en https://cohere.com/legal/terms-of-service/ Copyright © Cohere Inc.")
 
 
 def stop_model():
-    # liberamos memoria del modelo previo
+    # Liberamos memoria del modelo previo
     llm.myModel = None
     llm.myTokenizer = None
     llm.onlineModel = None
@@ -65,10 +86,13 @@ def stop_model():
 
 
 def auto_prompt(interfaz):
-    config.output_LLM = "este texto no se verá"
     print("Ejecutando método Auto Prompt.")
+    if config.modelo_activo=="llama2-7b":
+        config.prompt_auto = "Tell me some random trivia."
+    else:
+        config.prompt_auto = "Tell me more about that."
+
     send_prompt(config.prompt_auto)
-    # Después de enviar el prompt, llama al método para imprimir el valor de output_LLM
     send_chat_to_gui("auto", config.output_LLM, config.prompt_auto, interfaz)
 
 
@@ -93,20 +117,20 @@ def run_timer(interfaz):  # temporizador en marcha
         auto_prompt(interfaz)  # Llama a la función de devolución de llamada una vez que el temporizador haya terminado
 
     # Preparamos el reinicio del automatizado.
-    config.make_auto_llm_restart = False  # volverá a True en cuanto el usuario escriba algo
+    config.make_auto_llm_restart = False  # Volverá a True en cuanto el usuario escriba algo
     if not config.stop_llm:
-        start_timer(interfaz)  # volvemos al temporizador, creando un bucle.
+        start_timer(interfaz)  # Volvemos al temporizador, creando un bucle.
 
 
 def build_prompt(prompt):
     config.prompt_en_proceso = True
-    # construimos prompt adecuado para un LLM. Le adjuntaremos el historial en un string.
+    # Construimos prompt adecuado para un LLM. Le adjuntaremos el historial en un string.
     llm.log_string = ""
     for message in llm.chat_log:
         # IMPORTANTE - algunos modelos usarán el log de manera separada respecto al prompt.
         llm.log_string += f"{message['role']}: {message['message']}\n"
 
-    # le añadiremos el prompt a medida según el modelo elegido, para especializar el prompt.
+    # Le añadiremos el prompt a medida según el modelo elegido, para especializar el prompt.
     # opciones offline:
     if config.modelo_activo == "mistral-7b":
         return build_mistral_prompt(llm.log_string, prompt)
@@ -114,7 +138,7 @@ def build_prompt(prompt):
     elif config.modelo_activo == "llama2-7b":
         return build_ll2_prompt(llm.log_string, prompt)
 
-    # opciones online
+    # Opciones online
     elif config.modelo_activo == "cohere":
         # Cohere no usa un prompt mezclado con el log, los trata por separado.
         return build_cohere_prompt(prompt)
@@ -125,10 +149,11 @@ def build_prompt(prompt):
 
 def build_mistral_prompt(log_string, prompt):  # Mistral 7B v0.2 Instruct
     prompt_mistral = (
-            "[INST]" + "You are an assistant called " + config.name_bot
-            + ". The following is a conversation between you and " + config.name_user
-            + ". Write a response that appropriately completes the request made after the string <<USER_PROMPT>>,"
-            + "but keeping in mind your conversation before that as context: \n\n"
+            "[INST]" + "You are a friendly entity called " + config.name_bot
+            + ". The following is part of a conversation between you and " + config.name_user
+            + ". Write a response that appropriately completes the request made after the string <<USER_PROMPT>>."
+            + "You will try to answer briefly with less than 50 words, and you will never exceed the 100 words in "
+            + "your answer. \n\n"
             + log_string + "\n<<USER_PROMPT>>:"
             + prompt + "[/INST]"
     )
@@ -137,11 +162,12 @@ def build_mistral_prompt(log_string, prompt):  # Mistral 7B v0.2 Instruct
 
 def build_ll2_prompt(log_string, prompt):  # Llama 2 7B Chat
     prompt_ll2 = (
-            "[INST]" + "<<SYS>>You are an assistant called " + config.name_bot
-            + ". The following is a conversation between you and " + config.name_user
-            + ". Give a response. Be precise, and concise. Do not provide affirmative confirmation when you begin your answer, to keep it short."
-            + "Keep in mind this conversation before you answer, as context: \n\n"
-            + log_string + "\n:<</SYS>>"
+            "[INST]" + "<<SYS>>You are a friendly entity called " + config.name_bot
+            + ". The following is part of a conversation between you and " + config.name_user
+            + ". Write a response that appropriately completes the request made after the string <<USER_PROMPT>>."
+            + "You will try to answer briefly with less than 50 words, and you will never exceed the 100 words in "
+            + "your answer.<</SYS>> \n\n"
+            + log_string + "\n\n<<USER_PROMPT>>:"
             + prompt + "[/INST]"
     )
     return prompt_ll2
@@ -158,7 +184,7 @@ def estimate_token_usage(chat_log):
 
 
 def check_token_limit(chat_log, limit=config.context_size):
-    # en caso que los tokens amenacen con rebosar, se efectua limpieza por el tramo superior
+    # En caso que los tokens amenacen con rebosar, se efectua limpieza por el tramo superior
     while estimate_token_usage(chat_log) > (limit - 200):
         print(f"Estimación actual de tokens: {estimate_token_usage(chat_log)}")
         print(f"Límite de tokens: {limit}, cerca de rebosar")
@@ -198,20 +224,22 @@ def limpieza_generica_respuesta_modelo(output):
     # 2. ...y reemplazamos todas las coincidencias encontradas con una cadena vacía previo al nuevo output
     output = pattern.sub('', output)
 
-    #  Se buscarán ahora "<s>" y "</s>". Se eliminarán esas marcas sin afectar el resto del texto.
+    #  Se buscarán "<s>" y "</s>". Se eliminarán esas marcas sin afectar el resto del texto.
     # Los LLM a menudo introducen estas marcas, debido a parte del material original con el que han sido instruidos,
     # pero nosotros no queremos verlas en un chat.
     pattern = re.compile(r'</?s>')
     output = re.sub(pattern, '', output)
 
-    #  Usamos una expresión regular para encontrar el primer signo de exclamación o interrogación,
-    # antes de los primeros 15 caracteres. Esto es ideal para los modos asistente donde nos dan confirmación
+    #  Usamos una expresión regular para encontrar el primer signo de exclamación o interrogación.
+    #  Esto es ideal para los modos asistente donde nos dan confirmación
     # a inicios de la respuesta, que en un chat automatizado es molesto de ver de manera repetida.
-    confirmacion = re.search(r'[!?].{0,25}', output)
+    confirmacion = re.search(r'[!?]', output)
     if confirmacion:
-        # Si se encuentra un signo de exclamación o interrogación, obtenemos su índice
-        start_index = confirmacion.start() + 1  # Agrega 1 para incluir el signo de puntuación en la eliminación
-        output = output[start_index:]
+        # Si se encuentra un signo de exclamación o interrogación, verifica si hay un punto antes de este signo
+        pre_text = output[:confirmacion.start()]
+        if '.' not in pre_text:
+            if len(pre_text) <= 15:
+                output = output[confirmacion.start() + 1:]  # +1 para incluir el signo de puntuación en la eliminación
 
     return output
 
@@ -219,7 +247,7 @@ def limpieza_generica_respuesta_modelo(output):
 # Funcion tambien usable por llama 2 dada la similitud en su prompt y trato de respuesta.
 def respuesta_mistral(output_LLM):  # metodo para limpiar las respuestas dadas por Mistral
     output_LLM = limpieza_generica_respuesta_modelo(output_LLM)
-    #  se hace una primer limpieza del ouput en base al propio prompt del modelo,
+    #  se hace una primera limpieza del ouput en base al propio prompt del modelo,
     # que el LLM puede repetir en su respuesta
     index = output_LLM.find("[/INST]")
     if index != -1:  # se espera que mistral de la cadena de arriba en sus respuestas
@@ -230,8 +258,9 @@ def respuesta_mistral(output_LLM):  # metodo para limpiar las respuestas dadas p
 
     return output_LLM
 
-#  esta función podría eliminarse. Llama 2 puede usar la función respuesta_mistral(output_LLM) sin problema.
-#  por otra parte, la mantendremos como recordatorio si queremos algo más personalidado.
+
+#  Esta función podría eliminarse. Llama2 puede usar la función respuesta_mistral(output_LLM) sin problema.
+# Por otra parte, la mantendremos como recordatorio si queremos algo más personalizado.
 def respuesta_ll2(output_LLM):  # metodo para limpiar las respuestas dadas por Llama2
     output_LLM = limpieza_generica_respuesta_modelo(output_LLM)
     index = output_LLM.find("[/INST]")
@@ -241,7 +270,7 @@ def respuesta_ll2(output_LLM):  # metodo para limpiar las respuestas dadas por L
         return output_LLM
 
 
-# modelo online: cohere.
+# Modelo online: cohere.
 def respuesta_cohere(output_LLM):  # metodo para limpiar las respuestas dadas por Cohere
     # las respuestas saldrán limpias, no se tratarán como los modelos offline de menor potencia.
     return output_LLM
@@ -254,7 +283,7 @@ def cargando_modelos():
                                                            revision="main")
         llm.myTokenizer = AutoTokenizer.from_pretrained(config.model_name_or_path, use_fast=True)
 
-    # se da el peculiar caso de que llama 2 y mistral comparten el mismo tipo de iniciado.
+    # Se da el peculiar caso de que llama 2 y mistral comparten el mismo tipo de iniciado.
     # Se dejará aún así la parte de cada uno, a modo de referencia.
     elif config.modelo_activo == "llama2-7b":
         llm.myModel = AutoModelForCausalLM.from_pretrained(config.model_name_or_path,
@@ -311,11 +340,11 @@ def llama2_7B_chat_LLM(prompt_template):
 def cohere_chat_LLM(prompt_template):
     # Enviar el prompt al modelo de Cohere y obtener la respuesta
     stream = llm.onlineModel.chat_stream(message=prompt_template,
-                                           model='command',
-                                           preamble="You are wise and gentle but give concise, short answers.",
-                                           chat_history=llm.chat_log
-    )
-
+                                         model='command',
+                                         preamble="You are a friendly entity. Try to answer briefly with less than 50 "
+                                                  + "words, and never exceed 100 words in your reply.",
+                                         chat_history=llm.chat_log
+                                         )
     chatbot_response = ""
     for event in stream:
         if event.event_type == "text-generation":
@@ -326,11 +355,11 @@ def cohere_chat_LLM(prompt_template):
 
 
 def send_prompt(prompt):
-    # nuevo prompt
+    # Nuevo prompt
     formatted_prompt = build_prompt(prompt)
     print("Prompt con formato: " + formatted_prompt + "\n")
 
-    # entrada en el historial del prompt del usuario
+    # Entrada en el historial del prompt del usuario
     llm.chat_log.append({"role": config.name_user, "message": prompt})
 
     # Llamar a la función para obtener la respuesta del modelo
@@ -341,10 +370,10 @@ def send_prompt(prompt):
 
     print("\nSalida sintetizada del modelo a raiz del output:" + config.output_LLM + "\n")
 
-    # entrada en el historial de la respuesta del LLM
+    # Entrada en el historial de la respuesta del LLM
     llm.chat_log.append({"role": config.name_bot, "message": config.output_LLM})
 
-    # se hace control de tokens para cuidar que no se pase de unos márgenes
+    # Se hace control de tokens para cuidar que no se pase de unos márgenes
     check_token_limit(llm.chat_log)
 
     config.prompt_en_proceso = False

@@ -2,13 +2,12 @@ import sys
 import random
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFrame, QTextBrowser, QVBoxLayout, QHBoxLayout, QPushButton, QComboBox
 from PyQt5.QtGui import QFont
-from PyQt5.QtCore import Qt   # gestion textos en espacios
+from PyQt5.QtCore import Qt   # Gestion textos en espacios
 
 class TicTacToe(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        # self.config = GameConfig()  # acceso a config juego general
         self.setWindowTitle("Tic Tac Toe")
         self.setGeometry(100, 100, 800, 350)  # Ajusta el tamaño de la ventana para dar espacio al conjunto
 
@@ -38,7 +37,7 @@ class TicTacToe(QMainWindow):
         self.change_difficulty.currentIndexChanged.connect(self.change_difficulty_level)
         self.left_layout.addWidget(self.change_difficulty)
 
-        self.new_game_button = QPushButton("Nueva Partida")
+        self.new_game_button = QPushButton("Inicio Juego")
         self.new_game_button.clicked.connect(self.init_game)
         self.left_layout.addWidget(self.new_game_button)
 
@@ -62,10 +61,10 @@ class TicTacToe(QMainWindow):
         self.right_frame.setLayout(self.right_layout)
 
         self.info_browser = QTextBrowser()
-        self.info_browser.setFont(QFont("Input Sans", 14))  # Ajustar la fuente y tamaño
+        self.info_browser.setFont(QFont("Input Sans", 14))
         self.info_browser.setStyleSheet(
-            "QTextBrowser { background-color: white; color: black; }")  # Ajustar color de fondo y texto
-        self.info_browser.setAlignment(Qt.AlignCenter)  # Centrar texto horizontal y verticalmente
+            "QTextBrowser { background-color: white; color: black; }")
+        self.info_browser.setAlignment(Qt.AlignCenter)
         self.right_layout.addWidget(self.info_browser)
 
         self.player_wins = 0
@@ -75,7 +74,7 @@ class TicTacToe(QMainWindow):
         self.init_game()
 
     def init_game(self):
-        self.turn = 1  # Player 1 (jugador) inicio
+        self.turno = 1  # Player 1 (jugador) inicio
         self.board_size = int(self.grid_size_combo_box.currentText()[0])
         self.board = [[None for _ in range(self.board_size)] for _ in range(self.board_size)]
         self.turn_count = 0  # Reiniciar el contador de turnos
@@ -95,18 +94,19 @@ class TicTacToe(QMainWindow):
                 button = QPushButton()
                 button.setFixedSize(60, 60)
                 button.setStyleSheet("background-color: lightblue;")
+                # Capturamos coordenadas con lambda al clickar
                 button.clicked.connect(lambda _, x=i, y=j: self.button_clicked(x, y))
                 row_layout.addWidget(button)
                 self.buttons.append(button)
             grid_layout.addLayout(row_layout)
         self.frame_area_game.setLayout(grid_layout)
 
-        # el jugador 2 será la IA
-        if self.turn == 2:
+        # el jugador 2 / turno par, será la IA
+        if self.turno == 2:
             self.ai_move()
 
     def button_clicked(self, x, y):
-        if self.board[x][y] is None and self.turn == 1:
+        if self.board[x][y] is None and self.turno == 1:
             self.buttons[x * self.board_size + y].setStyleSheet("background-color: darkblue;")
             self.buttons[x * self.board_size + y].setFont(QFont('Arial Black', 24))
             self.buttons[x * self.board_size + y].setText("X")
@@ -120,21 +120,21 @@ class TicTacToe(QMainWindow):
                 self.info_browser.setText("¡Empate!")
                 self.disable_buttons()
             else:
-                self.turn = 2
+                self.turno = 2
                 self.turn_count += 1  # Incrementar el contador de turnos
                 self.info_browser.setText(f"Turno de la máquina (O) \nJugador: {self.player_wins}, Máquina: {self.ai_wins}")
                 self.ai_move()
 
-    def ai_move(self):
-        if self.turn == 2:
-            if self.change_difficulty.currentText() == "Retante":
+    def ai_move(self):  # Elegirá entre dos dificultades, según lo elegido en el combobox.
+        if self.turno == 2:
+            if self.change_difficulty.currentText() == "Retante":  # La poda será menos intensa en tableros grandes
                 # Incrementar la profundidad dependiendo del número de turnos
                 self.poda_profundidad = min(2 + self.turn_count // 2, 9) if self.board_size == 3 else min(2 + self.turn_count // 2, 6)
                 x, y = self.minimax(self.board, self.poda_profundidad, -float('inf'), float('inf'), True)[1]
-            else:
-                available_moves = [(i, j) for i in range(self.board_size) for j in range(self.board_size) if self.board[i][j] is None]
-                if available_moves:
-                    x, y = random.choice(available_moves)
+            else:  # seleccionará meramente una casilla disponible al azar
+                movimientos_posibles = [(i, j) for i in range(self.board_size) for j in range(self.board_size) if self.board[i][j] is None]
+                if movimientos_posibles:
+                    x, y = random.choice(movimientos_posibles)
 
             self.buttons[x * self.board_size + y].setStyleSheet("background-color: darkred;")
             self.buttons[x * self.board_size + y].setFont(QFont('Arial Black', 24))
@@ -149,7 +149,7 @@ class TicTacToe(QMainWindow):
                 self.info_browser.setText("¡Empate!")
                 self.disable_buttons()
             else:
-                self.turn = 1
+                self.turno = 1
                 self.turn_count += 1  # Incrementar el contador de turnos
                 self.info_browser.setText(f"El jugador es (X) \nJugador: {self.player_wins}, Máquina: {self.ai_wins}")
 
@@ -165,11 +165,11 @@ class TicTacToe(QMainWindow):
             return 0, None
 
         if is_maximizing:
-            # inicialización para prepararlo para el Minimax que usamos: mayor a negativo infinito.
-            # inicia la evaluación máxima.
+            # Inicialización para prepararlo para el Minimax que usamos: mayor a negativo infinito.
+            # Inicia la evaluación máxima.
             max_eval = -float('inf')
 
-            best_move = None
+            mejor_movimiento = None
             for i in range(self.board_size):
                 for j in range(self.board_size):
                     if board[i][j] is None:
@@ -178,16 +178,16 @@ class TicTacToe(QMainWindow):
                         board[i][j] = None
                         if eval > max_eval:
                             max_eval = eval
-                            best_move = (i, j)
+                            mejor_movimiento = (i, j)
                         alpha = max(alpha, eval)
                         if beta <= alpha:
                             break
-            return max_eval, best_move
+            return max_eval, mejor_movimiento
         else:
-            # inicialización para prepararlo para el Minimax que usamos: menor a positivo infinito.
-            # inicia la evaluación mínima.
+            # Inicialización para prepararlo para el Minimax que usamos: menor a positivo infinito.
+            # Inicia la evaluación mínima.
             min_eval = float('inf')
-            best_move = None
+            mejor_movimiento = None
 
             for i in range(self.board_size):
                 for j in range(self.board_size):
@@ -197,13 +197,13 @@ class TicTacToe(QMainWindow):
                         board[i][j] = None
                         if eval < min_eval:
                             min_eval = eval
-                            best_move = (i, j)
+                            mejor_movimiento = (i, j)
                         beta = min(beta, eval)
                         if beta <= alpha:
                             break
-            return min_eval, best_move
+            return min_eval, mejor_movimiento
 
-    def check_winner(self, player):
+    def check_winner(self, player):  # Iteración para ver si hay ganador. Mirará todas las formas de ganar.
         for i in range(self.board_size):
             if all(self.board[i][j] == player for j in range(self.board_size)):
                 return True
@@ -234,6 +234,7 @@ class TicTacToe(QMainWindow):
                 self.poda_profundidad = 2  # Profundidad inicial baja
         else:
             self.poda_profundidad = 9
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
