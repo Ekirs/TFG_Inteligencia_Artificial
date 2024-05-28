@@ -1,6 +1,6 @@
 Evaluación de LLMs en conjunto con actividades lúdicas para usuarios con ansiedad. TFG UOC 2023-24 S2, Ingenieria Informática, rama de computación. 
 
-Chatngame ("Chat 'n' Game") sería el programa lanzador.
+Chatngame ("Chat 'n' Game", informal de "charla y juego") sería el programa lanzador.
 
 Se necesita además:
 - API key, lograble tras registrarse en https://cohere.com/ .
