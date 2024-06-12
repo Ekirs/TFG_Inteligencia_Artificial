@@ -1,4 +1,4 @@
-Evaluación de LLMs en conjunto con actividades lúdicas para usuarios con ansiedad. TFG UOC 2023-24 S2, Ingenieria Informática, rama de computación. 
+Evaluación de LLMs en conjunto con actividades lúdicas para usuarios que sufran de soledad y/o ansiedad. TFG UOC 2023-24 S2, Ingenieria Informática, rama de computación. 
 
 Chatngame ("Chat 'n' Game", informal de "charla y juego") sería el programa lanzador.
 
